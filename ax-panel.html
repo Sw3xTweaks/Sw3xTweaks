@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SwexTweaks Admin</title>
+  <script>
+    // ⛔ Token guard — sayfa yüklenmeden önce kontrol
+    (function(){
+      var tk = sessionStorage.getItem('_ax');
+      var uid = sessionStorage.getItem('_ax_uid');
+      if (!tk || !uid) { location.replace('admin.html'); return; }
+      try {
+        var p = JSON.parse(atob(tk));
+        if (!p.exp || Date.now() > p.exp || !p.uid || p.uid !== uid) {
+          sessionStorage.clear(); location.replace('admin.html');
+        }
+      } catch(e) { sessionStorage.clear(); location.replace('admin.html'); }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#000;color:#f5f5f7;min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+    /* ===== LOADING SCREEN ===== */
+    #admin-loader{position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity 0.5s,visibility 0.5s}
+    #admin-loader.hidden{opacity:0;visibility:hidden;pointer-events:none}
+    .loader-logo-wrap{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .loader-logo-icon{width:44px;height:44px;background:linear-gradient(135deg,rgba(129,140,248,0.2),rgba(244,114,182,0.2));border:1px solid rgba(129,140,248,0.3);border-radius:12px;display:flex;align-items:center;justify-content:center;animation:pulse 1.5s ease-in-out infinite}
+    .loader-logo-text{font-size:1.3rem;font-weight:800;background:linear-gradient(90deg,#818cf8,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .loader-bar-wrap{width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden}
+    .loader-bar-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a855f7,#f472b6);border-radius:99px;animation:loadBar 1.2s ease-in-out forwards}
+    .loader-text{font-size:0.78rem;color:#52525b;font-weight:500}
+    @keyframes loadBar{from{width:0}to{width:100%}}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.3)}50%{box-shadow:0 0 20px 4px rgba(99,102,241,0.2)}}
+
+    /* ===== ARKA PLAN ===== */
+    body::before{content:'';position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:700px;height:600px;background:radial-gradient(ellipse,rgba(99,102,241,0.12) 0%,transparent 65%);pointer-events:none;z-index:0}
+
+    /* ===== NAV ===== */
+    .admin-nav{background:rgba(0,0,0,0.85);border-bottom:1px solid rgba(255,255,255,0.07);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);position:sticky;top:0;z-index:100;animation:slideDown 0.4s ease}
+    @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+    .admin-nav-logo{display:flex;align-items:center;gap:8px;font-size:0.95rem;font-weight:800;background:linear-gradient(90deg,#818cf8,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .admin-nav-right{display:flex;align-items:center;gap:10px}
+    .admin-user{font-size:0.8rem;color:#71717a;display:flex;align-items:center;gap:6px}
+    .admin-user::before{content:'';width:7px;height:7px;background:#34d399;border-radius:50%;display:inline-block;animation:blink 2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+    .logout-btn{padding:6px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#f87171;font-family:'Inter',sans-serif;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.2s}
+    .logout-btn:hover{background:rgba(239,68,68,0.2);transform:scale(1.03)}
+    .back-btn{padding:6px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#a1a1aa;font-family:'Inter',sans-serif;font-size:0.8rem;font-weight:600;text-decoration:none;transition:all 0.2s}
+    .back-btn:hover{background:rgba(255,255,255,0.1);color:#fff}
+
+    /* ===== CONTENT ===== */
+    .admin-content{max-width:1100px;margin:0 auto;padding:32px 24px;animation:fadeUp 0.5s ease 0.2s both}
+    @keyframes fadeUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+    /* ===== STAT CARDS ===== */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px}
+    .stat-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;transition:all 0.3s;position:relative;overflow:hidden;animation:fadeUp 0.5s ease both}
+    .stat-card:nth-child(1){animation-delay:0.1s}
+    .stat-card:nth-child(2){animation-delay:0.15s}
+    .stat-card:nth-child(3){animation-delay:0.2s}
+    .stat-card:nth-child(4){animation-delay:0.25s}
+    .stat-card:hover{border-color:rgba(99,102,241,0.3);transform:translateY(-3px);box-shadow:0 8px 30px rgba(99,102,241,0.1)}
+    .stat-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(99,102,241,0.05),transparent);opacity:0;transition:opacity 0.3s}
+    .stat-card:hover::after{opacity:1}
+    .stat-card-icon{font-size:1.6rem;margin-bottom:10px}
+    .stat-card-val{font-size:1.9rem;font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px;transition:all 0.3s}
+    .stat-card-label{font-size:0.72rem;color:#71717a;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+
+    /* ===== TABS ===== */
+    .admin-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:4px;margin-bottom:24px;width:fit-content;animation:fadeUp 0.5s ease 0.3s both}
+    .admin-tab{padding:8px 18px;border:none;background:none;color:#71717a;font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:600;border-radius:9px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+    .admin-tab:hover{color:#f5f5f7;background:rgba(255,255,255,0.06)}
+    .admin-tab.active{background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(168,85,247,0.2));color:#f5f5f7;box-shadow:0 0 12px rgba(99,102,241,0.15)}
+
+    /* ===== SECTIONS ===== */
+    .admin-section{display:none}
+    .admin-section.show{display:block;animation:fadeUp 0.3s ease}
+    .section-title{font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+    /* ===== TABLE ===== */
+    .data-table{width:100%;border-collapse:collapse;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden}
+    .data-table th{padding:12px 16px;text-align:left;font-size:0.72rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.07)}
+    .data-table td{padding:12px 16px;font-size:0.85rem;color:#a1a1aa;border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s}
+    .data-table tr:last-child td{border-bottom:none}
+    .data-table tr:hover td{background:rgba(255,255,255,0.03)}
+    .data-table td strong{color:#f5f5f7;font-weight:600}
+    .del-btn{padding:5px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:#f87171;font-family:'Inter',sans-serif;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.2s}
+    .del-btn:hover{background:rgba(239,68,68,0.25);transform:scale(1.05)}
+    .stars{color:#fbbf24;font-size:0.85rem}
+    .empty-state{text-align:center;padding:48px;color:#52525b;font-size:0.9rem}
+
+    /* ===== LOADING SPINNER ===== */
+    .loading{text-align:center;padding:48px;color:#52525b;font-size:0.85rem;display:flex;flex-direction:column;align-items:center;gap:12px}
+    .loading::before{content:'';width:32px;height:32px;border:3px solid rgba(99,102,241,0.2);border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ===== SCROLL BAR ===== */
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-track{background:rgba(255,255,255,0.02)}
+    ::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.3);border-radius:99px}
+    ::-webkit-scrollbar-thumb:hover{background:rgba(99,102,241,0.5)}
+
+    /* ===== TYPEWRITER ===== */
+    .typewriter{overflow:hidden;white-space:nowrap;border-right:2px solid #818cf8;animation:typing 1.2s steps(20,end) forwards, blink-caret 0.7s step-end infinite}
+    @keyframes typing{from{width:0}to{width:100%}}
+    @keyframes blink-caret{from,to{border-color:transparent}50%{border-color:#818cf8}}
+
+    /* ===== STAGGER FADE ===== */
+    .stagger-item{opacity:0;transform:translateY(12px);transition:opacity 0.4s ease,transform 0.4s ease}
+    .stagger-item.visible{opacity:1;transform:translateY(0)}
+
+    /* ===== NAV LINK HOVER ===== */
+    .admin-tab{position:relative;overflow:hidden}
+    .admin-tab::before{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:2px;background:linear-gradient(90deg,#6366f1,#f472b6);border-radius:99px;transition:width 0.3s ease}
+    .admin-tab:hover::before{width:60%}
+    .admin-tab.active::before{width:60%}
+
+    /* ===== STAT COUNTER ===== */
+    .stat-card-val{transition:all 0.5s cubic-bezier(0.34,1.56,0.64,1)}
+
+    /* ===== GLOW PULSE ===== */
+    .glow-pulse{animation:glowPulse 3s ease-in-out infinite}
+    @keyframes glowPulse{0%,100%{text-shadow:0 0 8px rgba(129,140,248,0.3)}50%{text-shadow:0 0 20px rgba(129,140,248,0.7),0 0 40px rgba(244,114,182,0.3)}}
+
+    /* ===== TABLE ROW STAGGER ===== */
+    .data-table tbody tr{opacity:0;transform:translateX(-8px);animation:rowIn 0.3s ease forwards}
+    @keyframes rowIn{to{opacity:1;transform:translateX(0)}}
+
+    @media(max-width:768px){.stats-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:480px){.stats-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div id="admin-loader">
+    <div class="loader-logo-wrap">
+      <div class="loader-logo-icon">
+        <svg width="22" height="22" viewBox="0 0 18 18" fill="none"><path d="M10 2L3 10H9L8 16L15 8H9L10 2Z" fill="url(#llg)" stroke="url(#llg)" stroke-width="0.5" stroke-linejoin="round"/><defs><linearGradient id="llg" x1="3" y1="2" x2="15" y2="16" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#f472b6"/></linearGradient></defs></svg>
+      </div>
+      <span class="loader-logo-text">SwexTweaks Admin</span>
+    </div>
+    <div class="loader-bar-wrap"><div class="loader-bar-fill"></div></div>
+    <div class="loader-text">Panel yükleniyor...</div>
+  </div>
+  <nav class="admin-nav">
+    <div class="admin-nav-logo glow-pulse">
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M10 2L3 10H9L8 16L15 8H9L10 2Z" fill="url(#ng)" stroke="url(#ng)" stroke-width="0.5" stroke-linejoin="round"/><defs><linearGradient id="ng" x1="3" y1="2" x2="15" y2="16" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#f472b6"/></linearGradient></defs></svg>
+      <span id="nav-title" class="typewriter">SwexTweaks Admin</span>
+    </div>
+    <div class="admin-nav-right">
+      <span class="admin-user" id="admin-user-label">👤 Admin</span>
+      <!-- Bildirim zili -->
+      <div style="position:relative;cursor:pointer" onclick="toggleNotifPanel()">
+        <svg id="notif-bell" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" style="transition:stroke 0.2s"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="notif-dot" style="display:none;position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#f472b6;border-radius:50%;animation:blink 1s infinite"></span>
+      </div>
+      <!-- Tema toggle -->
+      <button id="theme-btn" onclick="toggleTheme()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.85rem;transition:all 0.2s" title="Tema değiştir">🌙</button>
+      <a href="index.html" class="back-btn">← Siteye Dön</a>
+      <button class="logout-btn" onclick="adminLogout()">Çıkış</button>
+    </div>
+    <!-- Bildirim paneli -->
+    <div id="notif-panel" style="display:none;position:absolute;top:58px;right:24px;width:300px;background:rgba(10,10,20,0.98);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;z-index:200;backdrop-filter:blur(20px);box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <div style="font-size:0.82rem;font-weight:700;color:#f5f5f7;margin-bottom:12px;display:flex;justify-content:space-between">🔔 Bildirimler <span onclick="toggleNotifPanel()" style="cursor:pointer;color:#52525b">✕</span></div>
+      <div id="notif-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto">
+        <div style="font-size:0.78rem;color:#52525b;text-align:center;padding:16px">Henüz bildirim yok</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="admin-content">
+    <div class="stats-grid">
+      <div class="stat-card stagger-item"><div class="stat-card-icon">👥</div><div class="stat-card-val" id="stat-users">—</div><div class="stat-card-label">Toplam Kullanıcı</div></div>
+      <div class="stat-card stagger-item"><div class="stat-card-icon">💬</div><div class="stat-card-val" id="stat-reviews">—</div><div class="stat-card-label">Toplam Yorum</div></div>
+      <div class="stat-card stagger-item"><div class="stat-card-icon">⬇️</div><div class="stat-card-val" id="stat-downloads">—</div><div class="stat-card-label">İndirme</div></div>
+      <div class="stat-card stagger-item"><div class="stat-card-icon">⭐</div><div class="stat-card-val" id="stat-rating">—</div><div class="stat-card-label">Ort. Puan</div></div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="showTab('reviews')">💬 Yorumlar</button>
+      <button class="admin-tab" onclick="showTab('users')">👥 Kullanıcılar</button>
+      <button class="admin-tab" onclick="showTab('visitors')">🌍 Ziyaretçiler</button>
+      <button class="admin-tab" onclick="showTab('charts')">📈 Grafikler</button>
+      <button class="admin-tab" onclick="showTab('announce')">📢 Duyuru</button>
+      <button class="admin-tab" onclick="showTab('settings')">⚙️ Ayarlar</button>
+      <button class="admin-tab" onclick="showTab('notes')">📝 Notlar</button>
+      <button class="admin-tab" onclick="showTab('activity')">📊 Aktivite</button>
+    </div>
+
+    <div class="admin-section show" id="tab-reviews">
+      <div class="section-title" style="justify-content:space-between">💬 Tüm Yorumlar
+        <button onclick="clearAllLocalReviews()" style="padding:6px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#f87171;font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer">🗑️ Local Yorumları Sil</button>
+      </div>
+      <div id="reviews-container"><div class="loading">Yükleniyor...</div></div>
+    </div>
+
+    <div class="admin-section" id="tab-settings">
+      <div class="section-title">⚙️ Site Ayarları</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:4px;color:#f5f5f7">⬇️ İndirme Sayacı</h4>
+          <p style="font-size:0.75rem;color:#71717a;margin-bottom:12px">Başlangıç değerini ayarla</p>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <div style="flex:1"><label style="font-size:0.7rem;color:#a1a1aa;font-weight:600;display:block;margin-bottom:4px">PC Optimizer</label><input type="number" id="dl-pc" placeholder="0" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.85rem;outline:none" /></div>
+            <div style="flex:1"><label style="font-size:0.7rem;color:#a1a1aa;font-weight:600;display:block;margin-bottom:4px">Swex Optimizer</label><input type="number" id="dl-swex" placeholder="0" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.85rem;outline:none" /></div>
+          </div>
+          <button onclick="saveDownloadCounts()" style="width:100%;padding:9px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#818cf8;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer">Kaydet</button>
+          <div id="dl-status" style="font-size:0.75rem;color:#34d399;margin-top:6px;display:none"></div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:4px;color:#f5f5f7">📦 Program Versiyonu</h4>
+          <p style="font-size:0.75rem;color:#71717a;margin-bottom:12px">Sitede gösterilecek versiyon</p>
+          <label style="font-size:0.7rem;color:#a1a1aa;font-weight:600;display:block;margin-bottom:4px">PC Optimizer</label>
+          <input type="text" id="ver-pc" placeholder="v2.1.0" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.85rem;outline:none;margin-bottom:8px" />
+          <label style="font-size:0.7rem;color:#a1a1aa;font-weight:600;display:block;margin-bottom:4px">Swex Optimizer</label>
+          <input type="text" id="ver-swex" placeholder="v3.0.2" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.85rem;outline:none;margin-bottom:8px" />
+          <button onclick="saveVersions()" style="width:100%;padding:9px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#818cf8;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer">Kaydet</button>
+          <div id="ver-status" style="font-size:0.75rem;color:#34d399;margin-top:6px;display:none"></div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:4px;color:#f5f5f7">💬 Yorum Modu</h4>
+          <p style="font-size:0.75rem;color:#71717a;margin-bottom:12px">Yorumlar nasıl yayınlansın?</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.06)"><input type="radio" name="review-mode" value="auto" id="mode-auto" style="accent-color:#818cf8" /><div><div style="font-size:0.82rem;font-weight:600;color:#f5f5f7">Otomatik Yayınla</div><div style="font-size:0.7rem;color:#71717a">Yorum direkt görünür</div></div></label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.06)"><input type="radio" name="review-mode" value="manual" id="mode-manual" style="accent-color:#818cf8" /><div><div style="font-size:0.82rem;font-weight:600;color:#f5f5f7">Onay Beklesin</div><div style="font-size:0.7rem;color:#71717a">Admin onayladıktan sonra görünür</div></div></label>
+          </div>
+          <button onclick="saveReviewMode()" style="width:100%;padding:9px;margin-top:10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#818cf8;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer">Kaydet</button>
+          <div id="mode-status" style="font-size:0.75rem;color:#34d399;margin-top:6px;display:none"></div>
+        </div>
+
+        <!-- BAKIM MODU -->
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:4px;color:#f5f5f7">🚧 Bakım Modu</h4>
+          <p style="font-size:0.75rem;color:#71717a;margin-bottom:12px">Siteyi geçici olarak kapat</p>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <label style="position:relative;display:inline-block;width:44px;height:24px">
+              <input type="checkbox" id="maintenance-toggle" style="opacity:0;width:0;height:0" onchange="toggleMaintenance()">
+              <span id="maintenance-slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.1);border-radius:24px;transition:0.3s"></span>
+            </label>
+            <span id="maintenance-label" style="font-size:0.82rem;color:#a1a1aa">Kapalı</span>
+          </div>
+          <div id="maintenance-status" style="font-size:0.75rem;color:#34d399;display:none"></div>
+        </div>
+
+        <!-- İNDİRME LİNKLERİ -->
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:4px;color:#f5f5f7">🔗 İndirme Linkleri</h4>
+          <p style="font-size:0.75rem;color:#71717a;margin-bottom:12px">Program indirme linklerini güncelle</p>
+          <label style="font-size:0.7rem;color:#a1a1aa;font-weight:600;display:block;margin-bottom:4px">PC Optimizer Linki</label>
+          <input type="text" id="dl-link-pc" placeholder="downloads/Swex Optimizer.rar" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.85rem;outline:none;margin-bottom:8px" />
+          <label style="font-size:0.7rem;color:#a1a1aa;font-weight:600;display:block;margin-bottom:4px">Swex Optimizer Linki</label>
+          <input type="text" id="dl-link-swex" placeholder="downloads/tweak.rar" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.85rem;outline:none;margin-bottom:8px" />
+          <button onclick="saveDlLinks()" style="width:100%;padding:9px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#818cf8;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer">Kaydet</button>
+          <div id="dl-link-status" style="font-size:0.75rem;color:#34d399;margin-top:6px;display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section" id="tab-activity">
+      <div class="section-title">📊 Site Aktivitesi</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+        <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);border-radius:12px;padding:16px;text-align:center"><div style="font-size:1.6rem;font-weight:900;color:#34d399" id="act-online">—</div><div style="font-size:0.72rem;color:#71717a;margin-top:4px">Şu An Online</div></div>
+        <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:12px;padding:16px;text-align:center"><div style="font-size:1.6rem;font-weight:900;color:#818cf8" id="act-today">—</div><div style="font-size:0.72rem;color:#71717a;margin-top:4px">Bugün Ziyaret</div></div>
+        <div style="background:rgba(244,114,182,0.06);border:1px solid rgba(244,114,182,0.15);border-radius:12px;padding:16px;text-align:center"><div style="font-size:1.6rem;font-weight:900;color:#f472b6" id="act-downloads">—</div><div style="font-size:0.72rem;color:#71717a;margin-top:4px">Toplam İndirme</div></div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px">
+        <div style="font-size:0.82rem;font-weight:700;color:#f5f5f7;margin-bottom:12px">📈 İndirme Dağılımı</div>
+        <div id="download-chart" style="display:flex;gap:12px;align-items:flex-end;height:80px"></div>
+      </div>
+    </div>
+
+    <div class="admin-section" id="tab-users">
+      <div class="section-title">👥 Kayıtlı Kullanıcılar</div>
+      <div id="users-container"><div class="loading">Yükleniyor...</div></div>
+    </div>
+
+    <div class="admin-section" id="tab-visitors">
+      <div class="section-title" style="justify-content:space-between">
+        🌍 Ziyaretçi Kayıtları
+        <button onclick="clearVisitors()" style="padding:6px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#f87171;font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer">🗑️ Tümünü Sil</button>
+      </div>
+      <div id="visitors-container"><div class="loading">Yükleniyor...</div></div>
+    </div>
+
+    <!-- GRAFİKLER -->
+    <div class="admin-section" id="tab-charts">
+      <div class="section-title">📈 İstatistik Grafikleri</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <div style="font-size:0.85rem;font-weight:700;color:#f5f5f7;margin-bottom:16px">📅 Son 7 Gün Ziyaretçi</div>
+          <canvas id="chart-visitors" height="200"></canvas>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <div style="font-size:0.85rem;font-weight:700;color:#f5f5f7;margin-bottom:16px">🌍 Ülkelere Göre Dağılım</div>
+          <canvas id="chart-countries" height="200"></canvas>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <div style="font-size:0.85rem;font-weight:700;color:#f5f5f7;margin-bottom:16px">📱 Cihaz Dağılımı</div>
+          <canvas id="chart-devices" height="200"></canvas>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <div style="font-size:0.85rem;font-weight:700;color:#f5f5f7;margin-bottom:16px">⬇️ İndirme Dağılımı</div>
+          <canvas id="chart-downloads" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTLAR -->
+    <div class="admin-section" id="tab-notes">
+      <div class="section-title">📝 Hızlı Notlar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <h4 style="font-size:0.88rem;font-weight:700;color:#f5f5f7;margin-bottom:12px">✏️ Yeni Not</h4>
+          <textarea id="note-input" placeholder="Notunu buraya yaz..." rows="5" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.85rem;outline:none;resize:vertical"></textarea>
+          <button onclick="saveNote()" style="width:100%;margin-top:8px;padding:10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#818cf8;font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer">💾 Kaydet</button>
+          <div id="note-status" style="font-size:0.75rem;color:#34d399;margin-top:6px;display:none"></div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px">
+          <h4 style="font-size:0.88rem;font-weight:700;color:#f5f5f7;margin-bottom:12px">📋 Kayıtlı Notlar</h4>
+          <div id="notes-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto"><div class="loading">Yükleniyor...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section" id="tab-announce">
+      <div class="section-title">📢 Site Duyurusu</div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:24px;max-width:600px">
+        <p style="font-size:0.82rem;color:#71717a;margin-bottom:16px">Sitede banner olarak gösterilecek duyuru. Boş bırakırsan gizlenir.</p>
+        <input type="text" id="announce-input" placeholder="Örn: v3.1 yayında!" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.9rem;outline:none;margin-bottom:12px" />
+        <div style="display:flex;gap:8px">
+          <button onclick="saveAnnounce()" style="padding:10px 20px;background:#f5f5f7;color:#000;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">Yayınla</button>
+          <button onclick="clearAnnounce()" style="padding:10px 20px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;border-radius:8px;font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer">Kaldır</button>
+        </div>
+        <div id="announce-save-status" style="margin-top:10px;font-size:0.82rem;color:#34d399;display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="guard.js"></script>
+  <script src="admin-panel.js"></script>
+  <script>
+  // Giriş kontrolü - token yoksa geri gönder
+  if(!sessionStorage.getItem('_ax')){window.location.href='admin.html';}
+  // Direkt yükle
+  window.addEventListener('load', () => {
+    loadStats();
+    loadReviews();
+    // Loading screen'i kapat
+    setTimeout(() => {
+      const loader = document.getElementById('admin-loader');
+      if (loader) loader.classList.add('hidden');
+      // Stagger animasyonu başlat
+      initStagger();
+    }, 1200);
+  });
+
+  function initStagger() {
+    const items = document.querySelectorAll('.stagger-item');
+    items.forEach((el, i) => {
+      setTimeout(() => el.classList.add('visible'), i * 100);
+    });
+  }
+
+  // Tablo satırlarına sıralı animasyon
+  function animateTableRows() {
+    document.querySelectorAll('.data-table tbody tr').forEach((tr, i) => {
+      tr.style.animationDelay = (i * 0.04) + 's';
+    });
+  }
+
+  // Sayı sayma animasyonu
+  function animateCount(el, target) {
+    if (isNaN(target) || target === 0) return;
+    let start = 0;
+    const duration = 800;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start = Math.min(start + step, target);
+      el.textContent = Math.floor(start);
+      if (start >= target) { clearInterval(timer); el.textContent = target; }
+    }, 16);
+  }
+
+  // loadStats tamamlandıktan sonra sayı animasyonu
+  const _origLoadStats = window.loadStats;
+  </script>
+</body>
+</html>

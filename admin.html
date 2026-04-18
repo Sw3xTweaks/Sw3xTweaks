@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SwexTweaks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#000;color:#f5f5f7;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    body::before{content:'';position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:700px;height:600px;background:radial-gradient(ellipse,rgba(99,102,241,0.12) 0%,transparent 65%);pointer-events:none;z-index:0}
+    .box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:32px;width:100%;max-width:380px;backdrop-filter:blur(20px);position:relative;z-index:1}
+    .logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+    .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,rgba(129,140,248,0.2),rgba(244,114,182,0.2));border:1px solid rgba(129,140,248,0.3);border-radius:9px;display:flex;align-items:center;justify-content:center}
+    .logo-text{font-size:1rem;font-weight:800;background:linear-gradient(90deg,#fff,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .badge{display:inline-flex;align-items:center;gap:5px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);color:#fbbf24;padding:4px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;margin-bottom:20px}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:0.72rem;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+    .field input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#f5f5f7;font-family:'Inter',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.15s}
+    .field input:focus{border-color:rgba(129,140,248,0.6);box-shadow:0 0 0 3px rgba(99,102,241,0.12)}
+    .field input::placeholder{color:#3f3f46}
+    .btn{width:100%;padding:13px;background:#f5f5f7;color:#000;border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:6px}
+    .btn:hover{background:#e5e5e7}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .err{margin-top:10px;padding:10px 14px;border-radius:8px;font-size:0.82rem;font-weight:500;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;display:none}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M10 2L3 10H9L8 16L15 8H9L10 2Z" fill="url(#g)" stroke="url(#g)" stroke-width="0.5" stroke-linejoin="round"/><defs><linearGradient id="g" x1="3" y1="2" x2="15" y2="16" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#f472b6"/></linearGradient></defs></svg>
+      </div>
+      <span class="logo-text">SwexTweaks</span>
+    </div>
+    <div class="badge">🛡️ Admin Paneli</div>
+    <div class="field">
+      <label>E-posta</label>
+      <input type="email" id="em" placeholder="Admin e-postası" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label>Şifre</label>
+      <input type="password" id="pw" placeholder="••••••••" autocomplete="off" />
+    </div>
+    <button class="btn" id="btn" onclick="go()">Giriş Yap</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  !function(){
+    // Obfuscated config
+    const _c = [
+      'aHR0cHM6Ly9hd2duZ2ttaGpqc2Flc3phbmZrdy5zdXBhYmFzZS5jbw==',
+      'c2JfcHVibGlzaGFibGVfYWFiU0d5Z3ZrZkFCanhlR3ZfTEN6Z18yV0Noc3FWUQ=='
+    ].map(x => atob(x));
+
+    const _s = supabase.createClient(_c[0], _c[1]);
+
+    // Rate limiting
+    const _rl = { attempts: 0, locked: false, lockUntil: 0 };
+    function _checkRL() {
+      if (_rl.locked && Date.now() < _rl.lockUntil) {
+        const secs = Math.ceil((_rl.lockUntil - Date.now()) / 1000);
+        _showErr(`Çok fazla deneme. ${secs}s bekle.`); return false;
+      }
+      if (_rl.locked && Date.now() >= _rl.lockUntil) { _rl.locked = false; _rl.attempts = 0; }
+      return true;
+    }
+
+    async function _a(id) {
+      try {
+        const { data } = await _s.from('admins').select('user_id').eq('user_id', id).single();
+        return !!data;
+      } catch { return false; }
+    }
+
+    function _showErr(msg) {
+      const r = document.getElementById('err');
+      r.textContent = '❌ ' + msg; r.style.display = 'block';
+    }
+
+    // Güçlü token üretimi
+    function _mkToken(session) {
+      const payload = {
+        uid: session.user.id,
+        exp: Date.now() + 3600000, // 1 saat
+        sig: btoa(session.access_token.slice(-24) + session.user.id.slice(0,8)),
+        nonce: Math.random().toString(36).slice(2)
+      };
+      return btoa(JSON.stringify(payload));
+    }
+
+    window.go = async function() {
+      if (!_checkRL()) return;
+      const e = document.getElementById('em').value.trim();
+      const p = document.getElementById('pw').value;
+      const b = document.getElementById('btn');
+      document.getElementById('err').style.display = 'none';
+
+      if (!e || !p) { _showErr('Tüm alanları doldur.'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { _showErr('Geçersiz e-posta.'); return; }
+      if (p.length < 6) { _showErr('Şifre çok kısa.'); return; }
+
+      b.disabled = true; b.textContent = 'Giriş yapılıyor...';
+      _rl.attempts++;
+
+      const { data, error } = await _s.auth.signInWithPassword({ email: e, password: p });
+
+      if (error || !data?.user) {
+        if (_rl.attempts >= 5) { _rl.locked = true; _rl.lockUntil = Date.now() + 300000; _rl.attempts = 0; }
+        _showErr('Hatalı giriş. (' + _rl.attempts + '/5)');
+        b.disabled = false; b.textContent = 'Giriş Yap'; return;
+      }
+
+      const ok = await _a(data.user.id);
+      if (!ok) {
+        await _s.auth.signOut();
+        _rl.attempts += 2; // Yetkisiz erişim daha ağır sayılır
+        _showErr('Yetkisiz erişim.');
+        b.disabled = false; b.textContent = 'Giriş Yap'; return;
+      }
+
+      _rl.attempts = 0;
+      const tk = _mkToken(data.session);
+      sessionStorage.setItem('_ax', tk);
+      sessionStorage.setItem('_ax_uid', data.user.id);
+      window.location.href = 'ax-panel.html';
+    };
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') window.go(); });
+
+    // Zaten giriş yapılmışsa
+    _s.auth.getSession().then(async ({ data }) => {
+      if (!data.session?.user) return;
+      const ok = await _a(data.session.user.id);
+      if (ok) {
+        const tk = _mkToken(data.session);
+        sessionStorage.setItem('_ax', tk);
+        sessionStorage.setItem('_ax_uid', data.session.user.id);
+        window.location.href = 'ax-panel.html';
+      }
+    });
+  }();
+  </script>
+</body>
+</html>

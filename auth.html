@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SwexTweaks — Discord ile Giriş</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23818cf8'/><stop offset='100%25' stop-color='%23f472b6'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='%230a0a0f'/><polygon points='55,10 20,55 48,55 45,90 80,45 52,45' fill='url(%23g)'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #000;
+      color: #f5f5f7;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 600px;
+      background: radial-gradient(ellipse, rgba(99,102,241,0.15) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .wrap {
+      text-align: center;
+      padding: 40px 24px;
+      max-width: 420px;
+      width: 100%;
+    }
+    .logo-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, rgba(129,140,248,0.2), rgba(244,114,182,0.2));
+      border: 1px solid rgba(129,140,248,0.3);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    h1 {
+      font-size: 1.4rem; font-weight: 800;
+      background: linear-gradient(90deg, #fff, #c4b5fd, #f472b6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    p { color: #71717a; font-size: 0.9rem; margin-bottom: 32px; }
+
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 28px;
+    }
+
+    /* Discord giriş butonu */
+    .btn-discord-login {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 14px;
+      background: #5865f2;
+      color: #fff;
+      border: none; border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, transform 0.1s;
+      margin-bottom: 12px;
+    }
+    .btn-discord-login:hover { background: #4752c4; }
+    .btn-discord-login:active { transform: scale(0.98); }
+
+    .divider { color: #3f3f46; font-size: 0.78rem; margin: 16px 0; }
+
+    /* Yükleniyor durumu */
+    .loading-state { display: none; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(99,102,241,0.2);
+      border-top-color: #818cf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Başarı durumu */
+    .success-state { display: none; }
+    .success-icon {
+      width: 56px; height: 56px;
+      background: rgba(52,211,153,0.1);
+      border: 2px solid rgba(52,211,153,0.3);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 1.6rem;
+    }
+    .user-avatar {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      display: block;
+      border: 2px solid rgba(99,102,241,0.5);
+    }
+
+    /* Hata durumu */
+    .error-state { display: none; }
+    .error-box {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      color: #f87171;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+    }
+
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: #71717a; font-size: 0.82rem; font-weight: 500;
+      text-decoration: none;
+      margin-top: 20px;
+      transition: color 0.15s;
+    }
+    .btn-back:hover { color: #f5f5f7; }
+
+    .note {
+      color: #3f3f46; font-size: 0.75rem;
+      margin-top: 16px; line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo-icon">
+      <svg width="28" height="28" viewBox="0 0 18 18" fill="none">
+        <path d="M10 2L3 10H9L8 16L15 8H9L10 2Z" fill="url(#lg)" stroke="url(#lg)" stroke-width="0.5" stroke-linejoin="round"/>
+        <defs><linearGradient id="lg" x1="3" y1="2" x2="15" y2="16" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#f472b6"/></linearGradient></defs>
+      </svg>
+    </div>
+    <h1>SwexTweaks</h1>
+    <p>Discord hesabınla giriş yap ve programları indir</p>
+
+    <div class="card">
+
+      <!-- GİRİŞ FORMU -->
+      <div id="login-state">
+        <a id="discord-oauth-btn" href="#" class="btn-discord-login" onclick="startDiscordLogin()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+          Discord ile Giriş Yap
+        </a>
+        <p class="note">Discord hesabın güvende. Sadece kullanıcı adı ve avatar bilgisi alınır.</p>
+      </div>
+
+      <!-- YÜKLENİYOR -->
+      <div id="loading-state" class="loading-state">
+        <div class="spinner"></div>
+        <p style="color:#71717a;font-size:0.9rem;">Discord ile bağlanılıyor...</p>
+      </div>
+
+      <!-- BAŞARI -->
+      <div id="success-state" class="success-state">
+        <img id="success-avatar" class="user-avatar" src="" alt="Avatar" />
+        <h2 id="success-name" style="font-size:1.1rem;font-weight:800;margin-bottom:6px;"></h2>
+        <p style="color:#34d399;font-size:0.85rem;margin-bottom:20px;">✓ Başarıyla giriş yapıldı!</p>
+        <p style="color:#71717a;font-size:0.82rem;">Ana sayfaya yönlendiriliyorsun...</p>
+      </div>
+
+      <!-- HATA -->
+      <div id="error-state" class="error-state">
+        <div class="error-box" id="error-msg">Bir hata oluştu.</div>
+        <a href="auth.html" class="btn-discord-login" style="background:#5865f2;text-decoration:none;">Tekrar Dene</a>
+      </div>
+
+    </div>
+
+    <a href="index.html" class="btn-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Ana sayfaya dön
+    </a>
+  </div>
+
+  <script>
+    var _$d=function(_a,_k){return _a.map(function(_c){return String.fromCharCode(_c^_k)}).join('')};
+    var _cx=[111,115,115,119,116,61,40,40,102,112,96,105,96,108,106,111,109,109,116,102,98,116,125,102,105,97,108,112,41,116,114,119,102,101,102,116,98,41,100,104];
+    var _cy=[116,101,88,119,114,101,107,110,116,111,102,101,107,98,88,102,102,101,84,64,126,96,113,108,97,70,69,109,127,98,64,113,88,75,68,125,96,88,53,80,68,111,116,118,81,86];
+    var _cz=[54,51,62,51,51,48,52,62,54,50,54,51,51,52,51,52,50,63,53];
+    var _ck=7;
+    const DISCORD_CLIENT_ID = _$d(_cz,_ck);
+    const REDIRECT_URI = encodeURIComponent(window.location.origin + '/auth.html');
+    const SUPA_URL = _$d(_cx,_ck);
+    const SUPA_KEY = _$d(_cy,_ck);
+
+    async function saveUserToSupabase(userData) {
+      try {
+        await fetch(`${SUPA_URL}/rest/v1/discord_users`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPA_KEY,
+            'Authorization': 'Bearer ' + SUPA_KEY,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            discord_id:  userData.id,
+            username:    userData.username,
+            global_name: userData.globalName,
+            avatar:      userData.avatar,
+            last_login:  new Date().toISOString()
+          })
+        });
+      } catch(e) {
+        // Sessizce geç, login engellenmez
+      }
+    }
+
+    // ===== DISCORD LOGIN BAŞLAT =====
+    function startDiscordLogin() {
+      const state = Math.random().toString(36).substring(2);
+      sessionStorage.setItem('discord_state', state);
+
+      const url = `https://discord.com/api/oauth2/authorize` +
+        `?client_id=${DISCORD_CLIENT_ID}` +
+        `&redirect_uri=${REDIRECT_URI}` +
+        `&response_type=token` +
+        `&scope=identify` +
+        `&state=${state}`;
+
+      window.location.href = url;
+    }
+
+    // ===== CALLBACK İŞLE =====
+    async function handleCallback() {
+      // URL fragment'tan token al (#access_token=...)
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const tokenType   = params.get('token_type');
+      const error       = params.get('error');
+
+      if (error) {
+        showError('Discord girişi iptal edildi veya hata oluştu.');
+        return;
+      }
+
+      if (!accessToken) {
+        // Token yok, giriş sayfasını göster
+        showState('login');
+        return;
+      }
+
+      // Yükleniyor göster
+      showState('loading');
+
+      try {
+        // Discord'dan kullanıcı bilgisi al
+        const res = await fetch('https://discord.com/api/users/@me', {
+          headers: { Authorization: `${tokenType} ${accessToken}` }
+        });
+
+        if (!res.ok) throw new Error('Discord API hatası');
+
+        const user = await res.json();
+
+        // Avatar URL oluştur
+        const avatar = user.avatar
+          ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+          : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.discriminator || 0) % 5}.png`;
+
+        // localStorage'a kaydet
+        const userData = {
+          id:         user.id,
+          username:   user.username,
+          globalName: user.global_name || user.username,
+          avatar:     avatar,
+          token:      accessToken,
+          loginAt:    Date.now()
+        };
+        localStorage.setItem('swex_discord_user', JSON.stringify(userData));
+
+        // ===== SUPABASE'E KAYDET =====
+        await saveUserToSupabase(userData);
+
+        // Başarı göster
+        document.getElementById('success-avatar').src = avatar;
+        document.getElementById('success-name').textContent = userData.globalName || userData.username;
+        showState('success');
+
+        // 1.5sn sonra ana sayfaya dön
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1500);
+
+      } catch (err) {
+        showError('Kullanıcı bilgisi alınamadı. Tekrar dene.');
+      }
+    }
+
+    function showState(state) {
+      document.getElementById('login-state').style.display   = state === 'login'   ? 'block' : 'none';
+      document.getElementById('loading-state').style.display = state === 'loading' ? 'block' : 'none';
+      document.getElementById('success-state').style.display = state === 'success' ? 'block' : 'none';
+      document.getElementById('error-state').style.display   = state === 'error'   ? 'block' : 'none';
+    }
+
+    function showError(msg) {
+      document.getElementById('error-msg').textContent = msg;
+      showState('error');
+    }
+
+    // Sayfa yüklenince callback kontrol et
+    handleCallback();
+  </script>
+</body>
+</html>
